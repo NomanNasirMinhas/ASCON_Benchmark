@@ -90,13 +90,13 @@ async fn main() {
     println!("================== AES Test ENDED ======================");
 
     println!();
-    println!("================== DES Test START ======================");
+    println!("================== 3DES Test START ======================");
     let mut des_encryption_time = 0;
     let mut des_decryption_time = 0;
     for _ in 0..iterations {
         // print!(".");
-        let des_string = "12345689".as_bytes()[0..8].to_vec();
-        let cipher = Cipher::des_ecb();
+        let des_string = "0123456789987654gdsg3210".as_bytes()[0..24].to_vec();
+        let cipher = Cipher::des_ede3_cbc();
         let start = Instant::now();
         let des_ciphertext = encrypt(cipher, des_string.as_slice(), None, msg.as_bytes()).unwrap();
         let elapsed = start.elapsed();
@@ -118,14 +118,14 @@ async fn main() {
     }
     // println!();
     println!(
-        "Avg. DES Encryption Time: {}us",
+        "Avg. 3DES Encryption Time: {}us",
         des_encryption_time / (iterations as u128)
     );
     println!(
-        "Avg. DES Decryption Time: {}us",
+        "Avg. 3DES Decryption Time: {}us",
         des_decryption_time / (iterations as u128)
     );
-    println!("================== DES Test ENDED ======================");
+    println!("================== 3DES Test ENDED ======================");
 
     println!();
     println!("================== ChaCha20 Test START ======================");
