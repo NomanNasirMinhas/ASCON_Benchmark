@@ -1,10 +1,11 @@
 extern crate core;
 extern crate rand;
-
+extern crate systemstat;
 use aes_gcm::{
     aead::{Aead, AeadCore, KeyInit, OsRng},
     Aes256Gcm, Key, Nonce,
 };
+use std::thread;
 use ascon_aead::Ascon128;
 use chacha20poly1305::ChaCha20Poly1305;
 use hc_256::cipher::{KeyIvInit, StreamCipher};
@@ -14,8 +15,10 @@ use openssl::symm::{decrypt, encrypt, Cipher};
 use rand::Rng;
 use std::io;
 use std::time::{Duration, Instant};
+use systemstat::{System, Platform, saturating_sub_bytes};
 #[tokio::main]
 async fn main() {
+    sysStats();
     let mut iterations = String::new();
     let mut string_size = String::new();
     let stdin = io::stdin();
@@ -49,7 +52,6 @@ async fn main() {
 
     // let msg = "Hello World! This is a test message. We are testing different encryption algorithms.
     // This is a test message. We are testing different encryption algorithms. This is a test message.";
-
     println!();
     println!("================== AES Test STARTED ======================");
     //AES Test Start
@@ -255,4 +257,24 @@ fn generate_random_string(size: usize) -> String {
     let bytes: Vec<u8> = (0..size).map(|_| rng.gen()).collect();
     let string = bytes.iter().map(|&c| c as char).collect::<String>();
     string
+}
+
+fn sysStats() {
+    let sys = System::new();
+
+    match sys.memory() {
+        Ok(mem) => println!("\nMemory: {} used / {} ({} bytes) total ({:?})", saturating_sub_bytes(mem.total, mem.free), mem.total, mem.total.as_u64(), mem.platform_memory),
+        Err(x) => println!("\nMemory: error: {}", x)
+    }
+
+    match sys.cpu_load_aggregate() {
+        Ok(cpu)=> {
+            println!("\nMeasuring CPU load...");
+            thread::sleep(Duration::from_secs(1));
+            let cpu = cpu.done().unwrap();
+            println!("CPU load: {}% user, {}% nice, {}% system, {}% intr, {}% idle ",
+                     cpu.user * 100.0, cpu.nice * 100.0, cpu.system * 100.0, cpu.interrupt * 100.0, cpu.idle * 100.0);
+        },
+        Err(x) => println!("\nCPU load: error: {}", x)
+    }
 }
