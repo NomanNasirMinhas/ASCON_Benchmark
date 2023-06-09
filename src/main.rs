@@ -63,7 +63,7 @@ async fn main() {
         // print!(".");
         let cipher = Aes256Gcm::new(&aes_key);
         let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
-        let mem_1 = sys.memory().unwrap().free.as_u64();ççç
+        let mem_1 = sys.memory().unwrap().free.as_u64();
         let start = Instant::now();
         let aes_ciphertext = cipher.encrypt(&nonce, msg.as_bytes()).unwrap();
         let elapsed = start.elapsed();
