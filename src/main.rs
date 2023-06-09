@@ -18,7 +18,7 @@ use std::time::{Duration, Instant};
 use systemstat::{System, Platform, saturating_sub_bytes};
 #[tokio::main]
 async fn main() {
-    let sys = System::new();
+    // sysStats();
     let mut iterations = String::new();
     let mut string_size = String::new();
     let stdin = io::stdin();
@@ -56,33 +56,25 @@ async fn main() {
     println!("================== AES Test STARTED ======================");
     //AES Test Start
     let mut aes_encryption_time = 0;
-    let mut aes_encryption_memory = 0;
     let mut aes_decryption_time = 0;
-    let mut aes_decryption_memory = 0;
     for _ in 0..iterations {
         // print!(".");
         let cipher = Aes256Gcm::new(&aes_key);
         let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
-        let mem_1 = sys.memory().unwrap().free.as_u64();
         let start = Instant::now();
         let aes_ciphertext = cipher.encrypt(&nonce, msg.as_bytes()).unwrap();
         let elapsed = start.elapsed();
-        let mem_2 = sys.memory().unwrap().free.as_u64();
         aes_encryption_time += elapsed.as_micros();
         client
             .publish("test", aes_ciphertext.as_slice(), QoS::AtMostOnce, false)
             .await
             .unwrap();
-        aes_encryption_memory += mem_2 - mem_1;
         // println!("AES published. It took {}us to encrypt and send {} bytes of data", elapsed.as_micros(), msg.len());
 
         if let Ok(msg) = subscriptions.recv().await {
-            let mem_1 = sys.memory().unwrap().free.as_u64();
             let start = Instant::now();
             let plaintext = cipher.decrypt(&nonce, msg.payload.as_slice()).unwrap();
             let elapsed = start.elapsed();
-            let mem_2 = sys.memory().unwrap().free.as_u64();
-            aes_decryption_memory += mem_2 - mem_1;
             aes_decryption_time += elapsed.as_micros();
             let plaintext = std::str::from_utf8(&plaintext).unwrap();
             // println!("AES Received. It took {}us to decrypt {} bytes of data", elapsed.as_micros(), plaintext.len());
@@ -96,14 +88,6 @@ async fn main() {
     println!(
         "Avg. AES Decryption Time: {}us",
         aes_decryption_time / (iterations as u128)
-    );
-    println!(
-        "Avg. AES Encryption Memory: {} bytes",
-        aes_encryption_memory / (iterations as u64)
-    );
-    println!(
-        "Avg. AES Decryption Memory: {} bytes",
-        aes_decryption_memory / (iterations as u64)
     );
     println!("================== AES Test ENDED ======================");
 
