@@ -265,7 +265,7 @@ fn getMemoryUsed() -> u64{
 
     match sys.memory() {
         Ok(mem) => {
-            println!("\nMemory: {} used / {} ({} bytes) total ({:?})", saturating_sub_bytes(mem.total, mem.free), mem.total, mem.total.as_u64(), mem.platform_memory);
+            // println!("\nMemory: {} used / {} ({} bytes) total ({:?})", saturating_sub_bytes(mem.total, mem.free), mem.total, mem.total.as_u64(), mem.platform_memory);
             return saturating_sub_bytes(mem.total, mem.free).as_u64();
         },
         Err(x) => {
