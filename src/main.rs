@@ -56,8 +56,8 @@ async fn main() {
     //AES Test Start
     let mut aes_encryption_time = 0;
     let mut aes_decryption_time = 0;
-    let mut encryption_memory = 0;
-    let mut decryption_memory = 0;
+    let mut aes_encryption_memory = 0;
+    let mut aes_decryption_memory = 0;
     for _ in 0..iterations {
         // print!(".");
         let mem1 = getMemoryUsed();
@@ -68,7 +68,7 @@ async fn main() {
         let elapsed = start.elapsed();
         aes_encryption_time += elapsed.as_micros();
         let mem2 = getMemoryUsed();
-        encryption_memory += mem2 - mem1;
+        aes_encryption_memory += mem2 - mem1;
         client
             .publish("test", aes_ciphertext.as_slice(), QoS::AtMostOnce, false)
             .await
@@ -82,7 +82,7 @@ async fn main() {
             let elapsed = start.elapsed();
             aes_decryption_time += elapsed.as_micros();
             let mem2 = getMemoryUsed();
-            decryption_memory += mem2 - mem1;
+            aes_decryption_memory += mem2 - mem1;
             let plaintext = std::str::from_utf8(&plaintext).unwrap();
             // println!("AES Received. It took {}us to decrypt {} bytes of data", elapsed.as_micros(), plaintext.len());
         }
@@ -98,11 +98,11 @@ async fn main() {
     );
     println!(
         "Total AES Encryption Memory: {} bytes for {} iterations",
-        encryption_memory, iterations
+        aes_encryption_memory, iterations
     );
     println!(
         "Avg. AES Decryption Memory: {} bytes for {} iterations",
-        decryption_memory, iterations
+        aes_decryption_memory, iterations
     );
     println!("================== AES Test ENDED ======================");
 
@@ -110,24 +110,31 @@ async fn main() {
     println!("================== 3DES Test START ======================");
     let mut des_encryption_time = 0;
     let mut des_decryption_time = 0;
+    let mut des_encryption_memory = 0;
+    let mut des_decryption_memory = 0;
     for _ in 0..iterations {
         // print!(".");
         let des_string = "0123456789987654gdsg3210".as_bytes()[0..24].to_vec();
         let cipher = Cipher::des_ede3_cbc();
+        let mem1 = getMemoryUsed();
         let start = Instant::now();
         let des_ciphertext = encrypt(cipher, des_string.as_slice(), None, msg.as_bytes()).unwrap();
         let elapsed = start.elapsed();
         des_encryption_time += elapsed.as_micros();
+        let mem2 = getMemoryUsed();
+        des_encryption_memory += mem2 - mem1;
         client
             .publish("test", des_ciphertext.as_slice(), QoS::AtMostOnce, false)
             .await
             .unwrap();
         // println!("DES published. It took {}us to encrypt and send {} bytes of data", elapsed.as_micros(), msg.len());
         if let Ok(msg) = subscriptions.recv().await {
+            let mem1 = getMemoryUsed();
             let start = Instant::now();
             let plaintext = decrypt(cipher, des_string.as_slice(), None, &msg.payload)
                 .expect("Error decrypting DES");
             let elapsed = start.elapsed();
+            des_decryption_memory += mem1 - getMemoryUsed();
             des_decryption_time += elapsed.as_micros();
             let plaintext = std::str::from_utf8(&plaintext).unwrap();
             // println!("DES Received. It took {}us to decrypt {} bytes of data", elapsed.as_micros(), plaintext.len());
@@ -141,6 +148,14 @@ async fn main() {
     println!(
         "Avg. 3DES Decryption Time: {}us",
         des_decryption_time / (iterations as u128)
+    );
+    println!(
+        "Total 3DES Encryption Memory: {} bytes for {} iterations",
+        des_encryption_memory, iterations
+    );
+    println!(
+        "Avg. 3DES Decryption Memory: {} bytes for {} iterations",
+        des_decryption_memory, iterations
     );
     println!("================== 3DES Test ENDED ======================");
 
