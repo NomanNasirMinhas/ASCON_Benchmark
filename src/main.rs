@@ -18,7 +18,8 @@ use std::time::{Duration, Instant};
 use systemstat::{System, Platform, saturating_sub_bytes};
 #[tokio::main]
 async fn main() {
-    getMemoryUsed();
+    let mut memused = getMemoryUsed();
+    println!("Memory Used: {} bytes", memused);
     let mut iterations = String::new();
     let mut string_size = String::new();
     let stdin = io::stdin();
@@ -259,12 +260,18 @@ fn generate_random_string(size: usize) -> String {
     string
 }
 
-fn getMemoryUsed() {
+fn getMemoryUsed() -> u64{
     let sys = System::new();
 
     match sys.memory() {
-        Ok(mem) => println!("\nMemory: {} used / {} ({} bytes) total ({:?})", saturating_sub_bytes(mem.total, mem.free), mem.total, mem.total.as_u64(), mem.platform_memory),
-        Err(x) => println!("\nMemory: error: {}", x)
+        Ok(mem) => {
+            println!("\nMemory: {} used / {} ({} bytes) total ({:?})", saturating_sub_bytes(mem.total, mem.free), mem.total, mem.total.as_u64(), mem.platform_memory);
+            return mem.total.as_u64();
+        },
+        Err(x) => {
+            println!("\nMemory: error: {}", x);
+            return 0 as u64;
+        }
     }
 
     // match sys.cpu_load_aggregate() {
