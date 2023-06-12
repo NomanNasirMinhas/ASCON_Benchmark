@@ -25,16 +25,16 @@ async fn main() {
     println!("Enter the number of iterations you want to run: ");
     stdin.read_line(&mut iterations);
     let iterations: u32 = iterations.trim().parse().expect("Please enter a number");
-    println!("Enter the size (bytes) of the string you want to encrypt: ");
+    println!("Enter the minimum size (bytes) of the payload you want to encrypt: ");
     stdin.read_line(&mut string_size);
     let string_size: usize = string_size.trim().parse().expect("Please enter a number");
-    println!(
-        "Starting Test for {} Iterations and {} bytes of payload ",
-        iterations, string_size
-    );
     let msg = generate_random_string(string_size);
     let msg = msg.as_str();
     println!("Payload Generated of {} bytes....", msg.len());
+    println!(
+        "Starting Test for {} Iterations and {} bytes of payload ",
+        iterations, msg.len()
+    );
     println!();
     let mut client = Client::with_auto_id().unwrap();
     let aes_key = Aes256Gcm::generate_key(OsRng);
