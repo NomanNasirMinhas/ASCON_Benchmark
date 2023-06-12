@@ -18,6 +18,7 @@ use std::time::{Duration, Instant};
 use systemstat::{System, Platform, saturating_sub_bytes};
 #[tokio::main]
 async fn main() {
+    // let mut memgetMemoryUsed();
     let mut iterations = String::new();
     let mut string_size = String::new();
     let stdin = io::stdin();
@@ -56,19 +57,14 @@ async fn main() {
     //AES Test Start
     let mut aes_encryption_time = 0;
     let mut aes_decryption_time = 0;
-    let mut aes_encryption_memory = 0;
-    let mut aes_decryption_memory = 0;
     for _ in 0..iterations {
         // print!(".");
-        let mem1 = getMemoryUsed();
         let cipher = Aes256Gcm::new(&aes_key);
         let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
         let start = Instant::now();
         let aes_ciphertext = cipher.encrypt(&nonce, msg.as_bytes()).unwrap();
         let elapsed = start.elapsed();
         aes_encryption_time += elapsed.as_micros();
-        let mem2 = getMemoryUsed();
-        aes_encryption_memory += mem2 - mem1;
         client
             .publish("test", aes_ciphertext.as_slice(), QoS::AtMostOnce, false)
             .await
@@ -76,13 +72,10 @@ async fn main() {
         // println!("AES published. It took {}us to encrypt and send {} bytes of data", elapsed.as_micros(), msg.len());
 
         if let Ok(msg) = subscriptions.recv().await {
-            let mem1 = getMemoryUsed();
             let start = Instant::now();
             let plaintext = cipher.decrypt(&nonce, msg.payload.as_slice()).unwrap();
             let elapsed = start.elapsed();
             aes_decryption_time += elapsed.as_micros();
-            let mem2 = getMemoryUsed();
-            aes_decryption_memory += mem2 - mem1;
             let plaintext = std::str::from_utf8(&plaintext).unwrap();
             // println!("AES Received. It took {}us to decrypt {} bytes of data", elapsed.as_micros(), plaintext.len());
         }
@@ -96,45 +89,30 @@ async fn main() {
         "Avg. AES Decryption Time: {}us",
         aes_decryption_time / (iterations as u128)
     );
-    println!(
-        "Total AES Encryption Memory: {} bytes for {} iterations",
-        aes_encryption_memory, iterations
-    );
-    println!(
-        "Avg. AES Decryption Memory: {} bytes for {} iterations",
-        aes_decryption_memory, iterations
-    );
     println!("================== AES Test ENDED ======================");
 
     println!();
     println!("================== 3DES Test START ======================");
     let mut des_encryption_time = 0;
     let mut des_decryption_time = 0;
-    let mut des_encryption_memory = 0;
-    let mut des_decryption_memory = 0;
     for _ in 0..iterations {
         // print!(".");
         let des_string = "0123456789987654gdsg3210".as_bytes()[0..24].to_vec();
         let cipher = Cipher::des_ede3_cbc();
-        let mem1 = getMemoryUsed();
         let start = Instant::now();
         let des_ciphertext = encrypt(cipher, des_string.as_slice(), None, msg.as_bytes()).unwrap();
         let elapsed = start.elapsed();
         des_encryption_time += elapsed.as_micros();
-        let mem2 = getMemoryUsed();
-        des_encryption_memory += mem2 - mem1;
         client
             .publish("test", des_ciphertext.as_slice(), QoS::AtMostOnce, false)
             .await
             .unwrap();
         // println!("DES published. It took {}us to encrypt and send {} bytes of data", elapsed.as_micros(), msg.len());
         if let Ok(msg) = subscriptions.recv().await {
-            let mem1 = getMemoryUsed();
             let start = Instant::now();
             let plaintext = decrypt(cipher, des_string.as_slice(), None, &msg.payload)
                 .expect("Error decrypting DES");
             let elapsed = start.elapsed();
-            des_decryption_memory += mem1 - getMemoryUsed();
             des_decryption_time += elapsed.as_micros();
             let plaintext = std::str::from_utf8(&plaintext).unwrap();
             // println!("DES Received. It took {}us to decrypt {} bytes of data", elapsed.as_micros(), plaintext.len());
@@ -148,14 +126,6 @@ async fn main() {
     println!(
         "Avg. 3DES Decryption Time: {}us",
         des_decryption_time / (iterations as u128)
-    );
-    println!(
-        "Total 3DES Encryption Memory: {} bytes for {} iterations",
-        des_encryption_memory, iterations
-    );
-    println!(
-        "Avg. 3DES Decryption Memory: {} bytes for {} iterations",
-        des_decryption_memory, iterations
     );
     println!("================== 3DES Test ENDED ======================");
 
@@ -294,8 +264,8 @@ fn getMemoryUsed() -> u64{
 
     match sys.memory() {
         Ok(mem) => {
-            // println!("\nMemory: {} used / {} ({} bytes) total ({:?})", saturating_sub_bytes(mem.total, mem.free), mem.total, mem.total.as_u64(), mem.platform_memory);
-            return saturating_sub_bytes(mem.total, mem.free).as_u64();
+            println!("\nMemory: {} used / {} ({} bytes) total ({:?})", saturating_sub_bytes(mem.total, mem.free), mem.total, mem.total.as_u64(), mem.platform_memory);
+            return mem.total.as_u64();
         },
         Err(x) => {
             println!("\nMemory: error: {}", x);
