@@ -32,9 +32,9 @@ async fn main() {
         "Starting Test for {} Iterations and {} bytes of payload ",
         iterations, string_size
     );
-    let msg = generate_random_string(string_size);
-    let msg = msg.as_str();
-    println!("Generated Payload: {}", msg);
+    let msg_str = generate_random_string(string_size);
+    let msg = msg_str.as_str();
+    println!("Generated Payload: {}....", msg_str[0..10].to_string());
     println!();
     let mut client = Client::with_auto_id().unwrap();
     let aes_key = Aes256Gcm::generate_key(OsRng);
