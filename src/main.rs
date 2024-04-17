@@ -20,6 +20,13 @@ use std::thread;
 use dhat;
 use std::{mem, time::Instant};
 use systemstat::{saturating_sub_bytes, Duration, Platform, System};
+// use md5::{Md5, Digest};
+// use hex_literal::hex;
+use hex_literal::hex;
+use sha1::{Sha1, Digest};
+use sha3::{Digest as Sha3Digest, Sha3_256};
+use whirlpool::{Whirlpool, Digest as WhirlDigest};
+use ascon_hash::{AsconHash, Digest as AsconDigest};
 
 #[global_allocator]
 static ALLOC: dhat::Alloc = dhat::Alloc;
@@ -36,6 +43,7 @@ async fn main() {
     let stdin = io::stdin();
     println!("********************************************************************");
     println!("Select the Algorithm You Want to Benchmark");
+    println!("0. Hashing Benchmark");
     println!("1. AES");
     println!("2. 3DES");
     println!("3. ChaCha20");
@@ -74,6 +82,9 @@ async fn main() {
 
     // let msg = "Hello World! This is a test message. We are testing different encryption algorithms.
     // This is a test message. We are testing different encryption algorithms. This is a test message.";
+    if (test_type == 0) {
+        hashing_benchmark(string_size, iterations as usize);
+    }
     if (test_type == 1) {
         println!();
         println!("================== AES Test STARTED ======================");
@@ -228,56 +239,56 @@ async fn main() {
         println!("================== ChaCha20 Test ENDED ======================");
     }
 
-    if (test_type == 4) {
-        println!();
-        println!("================== HC256 Test START ======================");
-        let mut hc256_encryption_time = 0;
-        let mut hc256_decryption_time = 0;
-        for _ in 0..iterations {
-            // wait for a second
-            // thread::sleep(Duration::from_secs(1));
-            print!(".");
-            let key = [0x42; 32];
-            let nonce = [0x24; 32];
-            let mut cipher = Hc256::new(&key.into(), &nonce.into());
-            let mut buffer = msg.clone().as_bytes();
-            let start = Instant::now();
-            cipher.apply_keystream(&mut buffer.to_owned());
-            let elapsed = start.elapsed();
-            encryption_times.push(elapsed.as_micros());
-            hc256_encryption_time += elapsed.as_micros();
-            // client
-            //     .publish("test", buffer, QoS::AtMostOnce, false)
-            //     .await
-            //     .unwrap();
-            // println!("HC256 published. It took {}us to encrypt and send {} bytes of data", elapsed.as_micros(), msg.len());
-            // if let Ok(msg) = subscriptions.recv().await {
-            let mut cipher = Hc256::new(&key.into(), &nonce.into());
-            let mut mesg = buffer.as_ref();
-            let start = Instant::now();
-            cipher.apply_keystream(&mut mesg.to_owned());
-            let elapsed = start.elapsed();
-            decryption_times.push(elapsed.as_micros());
-            hc256_decryption_time += elapsed.as_micros();
-            let plaintext = std::str::from_utf8(&mesg).unwrap();
-            thread::sleep(Duration::from_millis(200));
+    // if (test_type == 4) {
+    //     println!();
+    //     println!("================== HC256 Test START ======================");
+    //     let mut hc256_encryption_time = 0;
+    //     let mut hc256_decryption_time = 0;
+    //     for _ in 0..iterations {
+    //         // wait for a second
+    //         // thread::sleep(Duration::from_secs(1));
+    //         print!(".");
+    //         let key = [0x42; 32];
+    //         let nonce = [0x24; 32];
+    //         let mut cipher = Hc256::new(&key.into());
+    //         let mut buffer = msg.clone().as_bytes();
+    //         let start = Instant::now();
+    //         cipher.apply_keystream(&mut buffer.to_owned());
+    //         let elapsed = start.elapsed();
+    //         encryption_times.push(elapsed.as_micros());
+    //         hc256_encryption_time += elapsed.as_micros();
+    //         // client
+    //         //     .publish("test", buffer, QoS::AtMostOnce, false)
+    //         //     .await
+    //         //     .unwrap();
+    //         // println!("HC256 published. It took {}us to encrypt and send {} bytes of data", elapsed.as_micros(), msg.len());
+    //         // if let Ok(msg) = subscriptions.recv().await {
+    //         let mut cipher = Hc256::new(&key.into());
+    //         let mut mesg = buffer.as_ref();
+    //         let start = Instant::now();
+    //         cipher.apply_keystream(&mut mesg.to_owned());
+    //         let elapsed = start.elapsed();
+    //         decryption_times.push(elapsed.as_micros());
+    //         hc256_decryption_time += elapsed.as_micros();
+    //         let plaintext = std::str::from_utf8(&mesg).unwrap();
+    //         thread::sleep(Duration::from_millis(200));
 
-            // println!("HC256 Received. It took {}us to decrypt {} bytes of data", elapsed.as_micros(), plaintext.len());
-            // }
-        }
-        // println!();
-        println!();
-        println!(
-            "Avg. HC256 Encryption Time: {}us",
-            hc256_encryption_time / (iterations as u128)
-        );
-        println!();
-        println!(
-            "Avg. HC256 Decryption Time: {}us",
-            hc256_decryption_time / (iterations as u128)
-        );
-        println!("================== HC256 Test ENDED ======================");
-    }
+    //         // println!("HC256 Received. It took {}us to decrypt {} bytes of data", elapsed.as_micros(), plaintext.len());
+    //         // }
+    //     }
+    //     // println!();
+    //     println!();
+    //     println!(
+    //         "Avg. HC256 Encryption Time: {}us",
+    //         hc256_encryption_time / (iterations as u128)
+    //     );
+    //     println!();
+    //     println!(
+    //         "Avg. HC256 Decryption Time: {}us",
+    //         hc256_decryption_time / (iterations as u128)
+    //     );
+    //     println!("================== HC256 Test ENDED ======================");
+    // }
 
     if (test_type == 5) {
         println!();
@@ -358,9 +369,84 @@ fn generate_random_string(size: usize) -> String {
     let bytes: Vec<u8> = (0..size).map(|_| rng.gen()).collect();
     let string = bytes.iter().map(|&c| c as char).collect::<String>();
     // Clip to match exactly the number of bytes as size
-    string[0..size].to_string()
+    // string[0..size].to_string()
+    string
 
 }
+
+fn hashing_benchmark(payload_size: usize, iterations: usize) {
+    let data = vec![0u8; payload_size];
+
+    // MD5    
+    let start_md5 = Instant::now();
+    for _ in 0..iterations {
+        let digest = md5::compute(data.clone());        
+    }
+    let elapsed_md5 = start_md5.elapsed();
+    println!("MD5: {:?}", elapsed_md5);
+
+    // SHA-1
+    let start_sha1 = Instant::now();
+    for _ in 0..iterations {
+        Sha1::digest(data.clone());
+    }
+    let elapsed_sha1 = start_sha1.elapsed();
+    println!("SHA-1: AVG {:?}", elapsed_sha1/iterations as u32);
+
+    // SHA-256
+    let start_sha256 = Instant::now();
+    for _ in 0..iterations {
+        let mut hasher = Sha3_256::new();
+        hasher.update(data.clone());
+        let hash = hasher.finalize();
+    }
+    let elapsed_sha256 = start_sha256.elapsed();
+    println!("SHA-256: {:?}", elapsed_sha256/iterations as u32);
+
+    // SHA-3
+    // let mut sha3_hasher = Sha3::sha3_256();
+    // let start_sha3 = Instant::now();
+    // for _ in 0..iterations {
+    //     sha3_hasher.input(&data);
+    //     let _ = sha3_hasher.result_str();
+    //     sha3_hasher.reset();
+    // }
+    // let elapsed_sha3 = start_sha3.elapsed();
+    // println!("SHA-3: {:?}", elapsed_sha3);
+
+    // BLAKE3
+    let start_blake3 = Instant::now();
+    for _ in 0..iterations {
+        let hash1 = blake3::hash(data.clone().as_ref());
+    }
+    let elapsed_blake2 = start_blake3.elapsed();
+    println!("BLAKE3: {:?}", elapsed_blake2/iterations as u32);
+
+    // Whirlpool
+    // let mut whirlpool_hasher = Whirlpool::new();
+    let start_whirlpool = Instant::now();
+    for _ in 0..iterations {
+        let mut hasher = Whirlpool::new();
+        hasher.update(data.clone());
+        let hash = hasher.finalize();
+    }
+    let elapsed_whirlpool = start_whirlpool.elapsed();
+    println!("Whirlpool: {:?}", elapsed_whirlpool/iterations as u32);
+
+    // ASCON hashing (replace with actual ASCON hashing implementation)
+    let mut ascon_time: Duration = Duration::from_secs(0);
+    for _ in 0..iterations {
+        let mut hasher = AsconHash::new();
+        // hasher.reset();
+        let start_ascon = Instant::now();
+        hasher.update(b"some bytes");
+        let hash = hasher.finalize();
+        let elapsed_ascon = start_ascon.elapsed();
+        ascon_time += elapsed_ascon;
+    }
+    println!("ASCON: {:?}", ascon_time/iterations as u32);
+}
+
 
 fn getMemoryUsed() -> u64 {
     let sys = System::new();
